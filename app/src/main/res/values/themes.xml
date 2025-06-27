@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.EGLATracker" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <item name="android:colorPrimary">#6750A4</item>
+        <item name="android:colorPrimaryDark">#5C3F96</item>
+        <item name="android:colorAccent">#625B71</item>
+        <item name="android:colorBackground">#FFFBFE</item>
+    </style>
+</resources> 
