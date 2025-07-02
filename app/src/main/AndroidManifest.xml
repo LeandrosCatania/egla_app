@@ -33,12 +33,16 @@
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
 
-    <!-- Network location assistance -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    
     <!-- OpenStreetMap tile caching -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    
+    <!-- Query for EGLA API Service -->
+    <queries>
+        <package android:name="com.egla.location" />
+        <intent>
+            <action android:name="com.egla.location.api.IEGLALocationService" />
+        </intent>
+    </queries>
 
     <application
         android:name=".EGLATrackerApplication"

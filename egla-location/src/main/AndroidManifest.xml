@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.egla.location">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- GPS and Location Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -39,6 +38,17 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+            
+        <!-- EGLA API Service - Runs in separate process and can be accessed by other apps -->
+        <service
+            android:name=".service.EGLAApiService"
+            android:exported="true"
+            android:process=":egla_api"
+            android:permission="android.permission.ACCESS_FINE_LOCATION">
+            <intent-filter>
+                <action android:name="com.egla.location.api.IEGLALocationService" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest> 

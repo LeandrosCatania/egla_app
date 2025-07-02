@@ -29,7 +29,13 @@ import java.util.*
 
 /**
  * Enhanced ViewModel with real EGLA integration and comprehensive logging
+ * 
+ * @deprecated Use LocationTrackingViewModelV2 instead, which uses the new EGLA API architecture
  */
+@Deprecated(
+    message = "Use LocationTrackingViewModelV2 which uses the EGLA Client API",
+    replaceWith = ReplaceWith("LocationTrackingViewModelV2")
+)
 class LocationTrackingViewModel(application: Application) : AndroidViewModel(application) {
     
     private val databaseLogger = DatabaseLogger(application)

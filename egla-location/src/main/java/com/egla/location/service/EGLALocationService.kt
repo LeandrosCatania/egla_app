@@ -4,6 +4,7 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.egla.location.EGLALocationManager
@@ -36,7 +37,12 @@ class EGLALocationService : Service() {
             }
             ACTION_STOP_LOCATION_UPDATES -> {
                 eglaManager.stopLocationUpdates()
-                stopForeground(true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
                 stopSelf()
             }
         }
@@ -57,17 +63,19 @@ class EGLALocationService : Service() {
     }
     
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "EGLA Location Service",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = "Enhanced GPS location tracking"
-            setShowBadge(false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "EGLA Location Service",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Enhanced GPS location tracking"
+                setShowBadge(false)
+            }
+            
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
         }
-        
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.createNotificationChannel(channel)
     }
     
     private fun createNotification(): Notification {
@@ -75,10 +83,13 @@ class EGLALocationService : Service() {
             action = ACTION_STOP_LOCATION_UPDATES
         }
         
-        val stopPendingIntent = PendingIntent.getService(
-            this, 0, stopIntent, 
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        
+        val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, flags)
         
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Enhanced GPS Active")

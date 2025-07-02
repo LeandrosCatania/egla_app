@@ -24,7 +24,7 @@ import com.example.eglatracker.ui.AnalysisScreen
 import com.example.eglatracker.ui.LogViewerScreen
 import com.example.eglatracker.ui.theme.EGLATrackerTheme
 import com.example.eglatracker.utils.DirectionCalculator
-import com.example.eglatracker.viewmodel.LocationTrackingViewModel
+import com.example.eglatracker.viewmodel.LocationTrackingViewModelV2
 import com.example.eglatracker.viewmodel.LocationTrackingUiState
 import java.text.SimpleDateFormat
 import java.util.*
@@ -103,7 +103,7 @@ fun EGLATrackerApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackingScreen(
-    viewModel: LocationTrackingViewModel = viewModel()
+    viewModel: LocationTrackingViewModelV2 = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isTracking by viewModel.isTracking.collectAsState()
