@@ -36,10 +36,8 @@ fun AnalysisScreen(
             TopAppBar(
                 title = { Text("Data Management") },
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.refreshData() }
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    IconButton(onClick = { viewModel.refreshData() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh data")
                     }
                 }
             )

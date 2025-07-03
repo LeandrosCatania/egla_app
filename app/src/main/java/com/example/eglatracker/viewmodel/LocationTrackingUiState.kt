@@ -35,6 +35,9 @@ data class LocationTrackingUiState(
     val totalFixes: Int = 0,
     val successRate: Float = 0f,
 
+    // History for sparkline visualisation (last 50 improvements)
+    val accuracyHistory: List<Float> = emptyList(),
+
     // System state
     val systemStatus: String = "INITIALIZING",
     val eglaMode: String = "High Accuracy",

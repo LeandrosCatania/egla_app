@@ -30,6 +30,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.PermissionRequired
+import androidx.compose.foundation.Canvas
 
 class MainActivity : ComponentActivity() {
     
@@ -427,7 +428,7 @@ fun PerformanceCard(uiState: LocationTrackingUiState) {
                     Text(
                         text = "${String.format("%.1f", uiState.originalAccuracy)}m",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Red
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
                 Column {
@@ -450,23 +451,16 @@ fun PerformanceCard(uiState: LocationTrackingUiState) {
                     Text(
                         text = "${String.format("%.0f", uiState.accuracyImprovement)}%",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (uiState.accuracyImprovement > 0) Color.Green else Color.Gray,
+                        color = if (uiState.accuracyImprovement > 0) MaterialTheme.colorScheme.tertiary else Color.Gray,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
             
-            // Performance bar
-            LinearProgressIndicator(
-                progress = (uiState.accuracyImprovement / 100f).coerceIn(0f, 1f),
-                modifier = Modifier.fillMaxWidth(),
-                color = when {
-                    uiState.accuracyImprovement > 50 -> Color.Green
-                    uiState.accuracyImprovement > 25 -> Color(0xFFFF9800)
-                    uiState.accuracyImprovement > 0 -> Color(0xFFFFC107)
-                    else -> Color.Gray
-                }
-            )
+            // Sparkline of last improvements
+            if (uiState.accuracyHistory.isNotEmpty()) {
+                SparklineChart(points = uiState.accuracyHistory)
+            }
             
             // Additional metrics
             Row(
@@ -505,6 +499,36 @@ fun PerformanceCard(uiState: LocationTrackingUiState) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SparklineChart(points: List<Float>, modifier: Modifier = Modifier) {
+    val max = points.maxOrNull() ?: 0f
+    val min = points.minOrNull() ?: 0f
+    val range = (max - min).takeIf { it > 0f } ?: 1f
+
+    Canvas(modifier = modifier
+        .fillMaxWidth()
+        .height(60.dp)) {
+        val stepX = size.width / (points.size - 1).coerceAtLeast(1)
+        val scaleY = size.height / range
+
+        var previous: androidx.compose.ui.geometry.Offset? = null
+        points.forEachIndexed { index, value ->
+            val x = index * stepX
+            val y = size.height - ((value - min) * scaleY)
+            val current = androidx.compose.ui.geometry.Offset(x, y)
+            previous?.let { p ->
+                drawLine(
+                    color = MaterialTheme.colorScheme.primary,
+                    start = p,
+                    end = current,
+                    strokeWidth = 4f
+                )
+            }
+            previous = current
         }
     }
 }

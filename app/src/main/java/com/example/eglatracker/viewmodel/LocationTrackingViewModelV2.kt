@@ -283,6 +283,7 @@ class LocationTrackingViewModelV2 @Inject constructor(
         
         // Update UI state
         updateUiState { state ->
+            val newHistory = (state.accuracyHistory + location.accuracyImprovement).takeLast(50)
             state.copy(
                 currentRecord = record,
                 latitude = location.latitude,
@@ -297,7 +298,8 @@ class LocationTrackingViewModelV2 @Inject constructor(
                 environment = location.environment ?: "UNKNOWN",
                 confidence = location.confidence,
                 processingTime = location.processingTimeMs,
-                lastUpdateTime = currentTime
+                lastUpdateTime = currentTime,
+                accuracyHistory = newHistory
             )
         }
         

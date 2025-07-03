@@ -118,7 +118,7 @@ private fun LogViewerHeader(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     IconButton(onClick = onRefresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh logs")
                     }
                     IconButton(onClick = onClearLogs) {
                         Icon(Icons.Default.Delete, contentDescription = "Clear logs")
