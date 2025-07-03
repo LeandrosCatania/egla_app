@@ -23,7 +23,7 @@ import kotlinx.coroutines.delay
 import com.example.eglatracker.ui.AnalysisScreen
 import com.example.eglatracker.ui.LogViewerScreen
 import com.example.eglatracker.ui.theme.EGLATrackerTheme
-import com.example.eglatracker.utils.DirectionCalculator
+import com.egla.core.DirectionCalculator
 import com.example.eglatracker.viewmodel.LocationTrackingViewModelV2
 import com.example.eglatracker.viewmodel.LocationTrackingUiState
 import java.text.SimpleDateFormat

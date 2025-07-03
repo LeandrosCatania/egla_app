@@ -11,11 +11,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' }
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
 rootProject.name = "Enhanced GNSS Location Accuracy Library"
 include ':egla-location'
-// include ':egla-library'  // Temporarily disabled due to KAPT JVM target issue
+include ':core'
+include ':domain'
+include ':data'
 include ':app' 

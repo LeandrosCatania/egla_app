@@ -10,7 +10,7 @@ import com.example.eglatracker.data.LocationRecord
 import com.example.eglatracker.data.LogLevel
 import com.example.eglatracker.data.LogTag
 import com.example.eglatracker.utils.DatabaseLogger
-import com.example.eglatracker.utils.DirectionCalculator
+import com.egla.core.DirectionCalculator
 import com.example.eglatracker.utils.LoggingManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

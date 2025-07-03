@@ -12,9 +12,12 @@ import com.egla.location.api.IEGLALocationService
 import com.egla.location.api.ILocationCallback
 import com.egla.location.api.LocationConfiguration
 import com.google.gson.Gson
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
-import io.reactivex.rxjava3.disposables.CompositeDisposable
-import io.reactivex.rxjava3.disposables.Disposable
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 import java.util.UUID
@@ -27,7 +30,7 @@ class EGLAApiService : Service() {
     
     private lateinit var eglaManager: EGLALocationManager
     private val gson = Gson()
-    private val serviceDisposables = CompositeDisposable()
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     // Track current system status
     private var currentSystemStatus = EGLALocationManager.SystemStatus.INACTIVE
@@ -86,22 +89,16 @@ class EGLAApiService : Service() {
                     applyConfiguration(session.configuration)
                     
                     // Subscribe to EGLA updates for this session
-                    session.locationDisposable = eglaManager.locationUpdates
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                            { enhancedLocation ->
-                                broadcastLocationUpdate(session, enhancedLocation)
-                            },
-                            { error ->
-                                broadcastError(session, 1, "Location error: ${error.message}")
-                            }
-                        )
-                    
-                    session.statusDisposable = eglaManager.systemStatus
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe { status ->
+                    session.locationJob = serviceScope.launch {
+                        eglaManager.locationUpdates.collect { enhanced ->
+                            broadcastLocationUpdate(session, enhanced)
+                        }
+                    }
+                    session.statusJob = serviceScope.launch {
+                        eglaManager.systemStatus.collect { status ->
                             broadcastStatusChange(session, mapStatus(status))
                         }
+                    }
                     
                     session.isActive = true
                     
@@ -121,8 +118,8 @@ class EGLAApiService : Service() {
         override fun stopLocationUpdates(sessionId: String) {
             clientSessions[sessionId]?.let { session ->
                 session.isActive = false
-                session.locationDisposable?.dispose()
-                session.statusDisposable?.dispose()
+                session.locationJob?.cancel()
+                session.statusJob?.cancel()
                 
                 // Stop EGLA if no active sessions
                 if (clientSessions.values.none { it.isActive }) {
@@ -166,14 +163,12 @@ class EGLAApiService : Service() {
         eglaManager = EGLALocationManager.getInstance(this)
         
         // Subscribe to system status updates to keep track of current status
-        serviceDisposables.add(
-            eglaManager.systemStatus
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { status ->
-                    currentSystemStatus = status
-                    Timber.d("EGLA system status changed to: $status")
-                }
-        )
+        serviceScope.launch {
+            eglaManager.systemStatus.collect { status ->
+                currentSystemStatus = status
+                Timber.d("EGLA system status changed to: $status")
+            }
+        }
     }
     
     override fun onBind(intent: Intent): IBinder {
@@ -194,7 +189,7 @@ class EGLAApiService : Service() {
         clientSessions.clear()
         
         // Clean up service subscriptions
-        serviceDisposables.clear()
+        serviceScope.cancel()
         
         callbacks.kill()
         
@@ -302,12 +297,12 @@ class EGLAApiService : Service() {
         var configuration: LocationConfiguration,
         var isActive: Boolean = false,
         var lastLocation: EnhancedLocationData? = null,
-        var locationDisposable: Disposable? = null,
-        var statusDisposable: Disposable? = null
+        var locationJob: Job? = null,
+        var statusJob: Job? = null
     ) {
         fun dispose() {
-            locationDisposable?.dispose()
-            statusDisposable?.dispose()
+            locationJob?.cancel()
+            statusJob?.cancel()
         }
     }
 } 

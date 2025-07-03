@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
@@ -203,10 +204,7 @@ class EGLALocationManager private constructor(
         stopLocationUpdates()
         scope.cancel()
         
-        // Complete all observables
-        _locationUpdates.close()
-        _accuracyMetrics.close()
-        _systemStatus.close()
+        // No further emissions after canceling scope
         
         Timber.d("EGLA LocationManager released")
     }

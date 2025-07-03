@@ -1,0 +1,17 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.egla.data'
+    compileSdk 34
+    defaultConfig { minSdk 21 targetSdk 34 }
+}
+
+dependencies {
+    implementation project(':domain')
+    implementation project(':core')
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1'
+    implementation 'androidx.core:core-ktx:1.10.1'
+}

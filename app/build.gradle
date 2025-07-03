@@ -132,4 +132,8 @@ dependencies {
 
     // Coroutines ↔ Rx interoperability (for gradual migration)
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-rx3:1.7.1'
+
+    implementation project(':core')
+    implementation project(':domain')
+    implementation project(':data')
 } 

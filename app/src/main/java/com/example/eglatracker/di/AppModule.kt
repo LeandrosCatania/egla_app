@@ -4,6 +4,8 @@ import android.content.Context
 import com.egla.location.client.EGLALocationClient
 import com.example.eglatracker.utils.DatabaseLogger
 import com.example.eglatracker.utils.LoggingManager
+import com.egla.data.DefaultEglaRepository
+import com.egla.domain.EglaRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,4 +30,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideLoggingManager(): LoggingManager = LoggingManager.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideEglaRepository(eglaClient: EGLALocationClient): EglaRepository =
+        DefaultEglaRepository(eglaClient)
 }

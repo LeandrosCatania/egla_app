@@ -57,13 +57,12 @@ dependencies {
     implementation 'org.tensorflow:tensorflow-lite:2.13.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
     
-    // Reactive Programming
-    implementation 'io.reactivex.rxjava3:rxjava:3.1.6'
-    implementation 'io.reactivex.rxjava3:rxandroid:3.0.2'
-    
-    // Coroutines
+    // Kotlin Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1'
+    
+    // Core math utilities
+    implementation project(':core')
     
     // JSON Processing
     implementation 'com.google.code.gson:gson:2.10.1'
