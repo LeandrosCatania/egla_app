@@ -61,8 +61,7 @@ class MainActivity : ComponentActivity() {
         requestPermissionLauncher.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
+                Manifest.permission.ACCESS_COARSE_LOCATION
             )
         )
     }
@@ -129,12 +128,23 @@ fun TrackingScreen(
         }
     }
     
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Display errors as snackbars for better UX
+    uiState.errorMessage?.let { message ->
+        LaunchedEffect(message) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearError()
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("EGLA Location Tracker") }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -178,14 +188,7 @@ fun TrackingScreen(
                 )
             }
             
-            uiState.errorMessage?.let { error ->
-                item {
-                    ErrorCard(
-                        error = error,
-                        onDismiss = { viewModel.clearError() }
-                    )
-                }
-            }
+            /* Error messages are now shown via SnackbarHost */
         }
     }
 }
@@ -567,39 +570,6 @@ fun SettingsCard(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun ErrorCard(error: String, onDismiss: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Error",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-            Text(
-                text = error,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Text("Dismiss")
             }
         }
     }
