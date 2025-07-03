@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -102,7 +102,7 @@ fun EGLATrackerApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackingScreen(
-    viewModel: LocationTrackingViewModelV2 = viewModel()
+    viewModel: LocationTrackingViewModelV2 = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isTracking by viewModel.isTracking.collectAsState()

@@ -1,8 +1,7 @@
 package com.example.eglatracker.viewmodel
 
-import android.app.Application
 import android.location.Location
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.egla.location.api.EnhancedLocationData
 import com.egla.location.api.LocationConfiguration
@@ -13,6 +12,8 @@ import com.example.eglatracker.data.LogTag
 import com.example.eglatracker.utils.DatabaseLogger
 import com.example.eglatracker.utils.DirectionCalculator
 import com.example.eglatracker.utils.LoggingManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,14 +29,12 @@ import java.util.*
  * This demonstrates how to use the new EGLA API architecture where EGLA runs
  * as a separate service and the app communicates through the client library.
  */
-class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(application) {
-    
-    private val databaseLogger = DatabaseLogger(application)
-    private val loggingManager = LoggingManager.getInstance()
-    
-    // EGLA Client instead of direct manager
-    private val eglaClient = EGLALocationClient(application)
-    private var isEGLAConnected = false
+@HiltViewModel
+class LocationTrackingViewModelV2 @Inject constructor(
+    private val eglaClient: EGLALocationClient,
+    private val databaseLogger: DatabaseLogger,
+    private val loggingManager: LoggingManager
+) : ViewModel() {
     
     // System logging
     private val systemLogs = mutableListOf<String>()
@@ -69,13 +68,11 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
                 when (state) {
                     EGLALocationClient.ConnectionState.CONNECTED -> {
                         log("✓ Connected to EGLA API Service")
-                        isEGLAConnected = true
                         updateUiState { it.copy(systemStatus = "EGLA API Connected") }
                         setupEGLASubscriptions()
                     }
                     EGLALocationClient.ConnectionState.DISCONNECTED -> {
                         log("❌ Disconnected from EGLA API Service")
-                        isEGLAConnected = false
                         updateUiState { it.copy(systemStatus = "EGLA API Disconnected") }
                     }
                     EGLALocationClient.ConnectionState.CONNECTING -> {
@@ -149,32 +146,27 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
                 log("📝 Session: ${databaseLogger.getCurrentSession()}")
                 updateUiState { it.copy(currentLogFile = "Database: ${databaseLogger.getCurrentSession()}") }
                 
-                if (isEGLAConnected) {
-                    // Configure EGLA
-                    log("⚙️ Configuring EGLA for high accuracy mode...")
-                    val configured = eglaClient.configure(LocationConfiguration.highAccuracyMode())
+                // Configure EGLA
+                log("⚙️ Configuring EGLA for high accuracy mode...")
+                val configured = eglaClient.configure(LocationConfiguration.highAccuracyMode())
+                
+                if (configured) {
+                    log("✓ EGLA configured successfully")
                     
-                    if (configured) {
-                        log("✓ EGLA configured successfully")
-                        
-                        // Start location updates
-                        log("🎯 Starting EGLA location updates...")
-                        val started = eglaClient.startLocationUpdates()
-                        
-                        if (started) {
-                            log("✓ EGLA location updates started")
-                            log("📡 Waiting for GPS data...")
-                        } else {
-                            log("❌ Failed to start EGLA updates")
-                            handleError("Failed to start location updates")
-                        }
+                    // Start location updates
+                    log("🎯 Starting EGLA location updates...")
+                    val started = eglaClient.startLocationUpdates()
+                    
+                    if (started) {
+                        log("✓ EGLA location updates started")
+                        log("📡 Waiting for GPS data...")
                     } else {
-                        log("❌ Failed to configure EGLA")
-                        handleError("Failed to configure EGLA service")
+                        log("❌ Failed to start EGLA updates")
+                        handleError("Failed to start location updates")
                     }
                 } else {
-                    log("❌ EGLA API Service not connected")
-                    handleError("EGLA API Service not available")
+                    log("❌ Failed to configure EGLA")
+                    handleError("Failed to configure EGLA service")
                 }
                 
             } catch (e: Exception) {
@@ -189,11 +181,6 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
             log("⏹️ Stopping location tracking...")
             
             _isTracking.value = false
-            
-            if (isEGLAConnected) {
-                eglaClient.stopLocationUpdates()
-                log("✓ EGLA location updates stopped")
-            }
             
             databaseLogger.stopLogging()
             log("✓ Database logging stopped")
@@ -218,27 +205,21 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
     suspend fun getDatabaseStats() = databaseLogger.getDeviceStats()
     
     fun changeToBalancedMode() {
-        if (isEGLAConnected) {
-            eglaClient.configure(LocationConfiguration.balancedMode())
-            updateUiState { it.copy(eglaMode = "Balanced") }
-            log("⚙️ Switched to Balanced mode")
-        }
+        eglaClient.configure(LocationConfiguration.balancedMode())
+        updateUiState { it.copy(eglaMode = "Balanced") }
+        log("⚙️ Switched to Balanced mode")
     }
     
     fun changeToHighAccuracyMode() {
-        if (isEGLAConnected) {
-            eglaClient.configure(LocationConfiguration.highAccuracyMode())
-            updateUiState { it.copy(eglaMode = "High Accuracy") }
-            log("⚙️ Switched to High Accuracy mode")
-        }
+        eglaClient.configure(LocationConfiguration.highAccuracyMode())
+        updateUiState { it.copy(eglaMode = "High Accuracy") }
+        log("⚙️ Switched to High Accuracy mode")
     }
     
     fun changeToUltraHighMode() {
-        if (isEGLAConnected) {
-            eglaClient.configure(LocationConfiguration.ultraHighAccuracyMode())
-            updateUiState { it.copy(eglaMode = "Ultra High") }
-            log("⚙️ Switched to Ultra High Accuracy mode")
-        }
+        eglaClient.configure(LocationConfiguration.ultraHighAccuracyMode())
+        updateUiState { it.copy(eglaMode = "Ultra High") }
+        log("⚙️ Switched to Ultra High Accuracy mode")
     }
     
     fun clearError() {
