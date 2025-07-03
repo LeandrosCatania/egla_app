@@ -2,6 +2,7 @@ plugins {
     id 'com.android.library' version '8.0.2'
     id 'org.jetbrains.kotlin.android' version '1.8.21'
     id 'org.jetbrains.dokka' version '1.9.10'
+    id 'io.gitlab.arturbosch.detekt' version '1.23.0'
 }
 
 android {
@@ -84,4 +85,10 @@ tasks.register('dokkaAll', org.jetbrains.dokka.gradle.DokkaTask.class) {
     subprojects.each { proj ->
         dependsOn(proj.tasks.matching { it.name == 'dokkaHtml' })
     }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config = files("config/detekt/detekt.yml")
 } 
