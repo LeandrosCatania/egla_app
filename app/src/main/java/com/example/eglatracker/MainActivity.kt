@@ -1,6 +1,5 @@
 package com.example.eglatracker
 
-import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.example.eglatracker.ui.AnalysisScreen
@@ -28,22 +26,15 @@ import com.example.eglatracker.viewmodel.LocationTrackingViewModelV2
 import com.example.eglatracker.viewmodel.LocationTrackingUiState
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.MultiplePermissionsState
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.PermissionRequired
 
 class MainActivity : ComponentActivity() {
     
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allPermissionsGranted = permissions.values.all { it }
-        if (!allPermissionsGranted) {
-            // Handle permission denial
-        }
-    }
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        requestPermissions()
         
         setContent {
             EGLATrackerTheme {
@@ -55,15 +46,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-    
-    private fun requestPermissions() {
-        requestPermissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
-        )
     }
 }
 
@@ -92,10 +74,33 @@ fun EGLATrackerApp() {
         }
         
         when (selectedTab) {
-            0 -> TrackingScreen()
+            0 -> TrackingScreenWithPermissions()
             1 -> AnalysisScreen()
             2 -> LogViewerScreen()
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrackingScreenWithPermissions() {
+    val permissionsState = rememberMultiplePermissionsState(
+        listOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+
+    PermissionRequired(
+        multiplePermissionsState = permissionsState,
+        permissionsNotGrantedContent = {
+            PermissionRationale(permissionsState)
+        },
+        permissionsNotAvailableContent = {
+            PermissionDeniedPermanently()
+        }
+    ) {
+        TrackingScreen()
     }
 }
 
@@ -572,5 +577,41 @@ fun SettingsCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PermissionRationale(state: MultiplePermissionsState) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "This app needs location access to enhance GNSS accuracy.",
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { state.launchMultiplePermissionRequest() }) {
+            Text("Grant Permission")
+        }
+    }
+}
+
+@Composable
+private fun PermissionDeniedPermanently() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Location permission permanently denied. Please enable it in settings.",
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 } 
