@@ -19,8 +19,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import timber.log.Timber
+import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Enhanced GNSS Location Accuracy Manager
@@ -69,6 +71,10 @@ class EGLALocationManager private constructor(
     // Performance Monitoring
     private val performanceMetrics = PerformanceMetrics()
     private var startTime: Long = 0L
+    
+    // Performance optimisation
+    private val processingDispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+    private val isStationary = AtomicBoolean(false)
     
     /**
      * Stream of enhanced location updates
@@ -263,8 +269,13 @@ class EGLALocationManager private constructor(
                     val processingTime = System.currentTimeMillis() - processingStart
                     performanceMetrics.addProcessingTime(processingTime)
                     
-                    // Adaptive delay based on configuration
-                    delay(configuration.performanceConfig.updateIntervalMs)
+                    // Adaptive delay: triple interval when device is stationary
+                    val interval = if (isStationary.get())
+                        configuration.performanceConfig.updateIntervalMs * 3L
+                    else
+                        configuration.performanceConfig.updateIntervalMs
+
+                    delay(interval)
                     
                 } catch (e: CancellationException) {
                     break
@@ -276,7 +287,7 @@ class EGLALocationManager private constructor(
         }
     }
     
-    private suspend fun processLocationUpdate(rawLocation: Location) = withContext(Dispatchers.Default) {
+    private suspend fun processLocationUpdate(rawLocation: Location) = withContext(processingDispatcher) {
         try {
             val processingStart = System.currentTimeMillis()
             
@@ -308,6 +319,9 @@ class EGLALocationManager private constructor(
                 timestamp = System.currentTimeMillis()
             )
             
+            // Update stationary flag
+            isStationary.set(optimizedLocation.speed < 0.5f)
+
             // Update state and emit
             lastKnownLocation = enhancedLocation
             _locationUpdates.tryEmit(enhancedLocation)
