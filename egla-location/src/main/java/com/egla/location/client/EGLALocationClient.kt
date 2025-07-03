@@ -75,6 +75,25 @@ class EGLALocationClient(private val context: Context) {
         awaitClose { disposable.dispose() }
     }
     
+    /**
+     * Flow equivalents for reactive streams – enables Kotlin Coroutines only
+     * consumers without pulling in RxJava.
+     */
+    val connectionStateFlow: Flow<ConnectionState> = callbackFlow {
+        val disposable = connectionState.subscribe { trySend(it) }
+        awaitClose { disposable.dispose() }
+    }
+    
+    val serviceStatusFlow: Flow<ServiceStatus> = callbackFlow {
+        val disposable = serviceStatus.subscribe { trySend(it) }
+        awaitClose { disposable.dispose() }
+    }
+    
+    val errorsFlow: Flow<LocationError> = callbackFlow {
+        val disposable = errors.subscribe { trySend(it) }
+        awaitClose { disposable.dispose() }
+    }
+    
     // Service connection
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {

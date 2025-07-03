@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+    id 'dagger.hilt.android.plugin'
 }
 
 android {
@@ -77,7 +79,6 @@ dependencies {
     
     // RxJava
     implementation 'io.reactivex.rxjava3:rxjava:3.1.6'
-    implementation 'io.reactivex.rxjava3:rxandroid:3.0.2'
     
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1'
@@ -124,4 +125,11 @@ dependencies {
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+
+    // Hilt for Dependency Injection
+    implementation 'com.google.dagger:hilt-android:2.48'
+    kapt 'com.google.dagger:hilt-android-compiler:2.48'
+
+    // Coroutines ↔ Rx interoperability (for gradual migration)
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-rx3:1.7.1'
 } 

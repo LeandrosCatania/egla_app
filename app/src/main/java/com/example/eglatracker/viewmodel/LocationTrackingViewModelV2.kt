@@ -13,12 +13,11 @@ import com.example.eglatracker.data.LogTag
 import com.example.eglatracker.utils.DatabaseLogger
 import com.example.eglatracker.utils.DirectionCalculator
 import com.example.eglatracker.utils.LoggingManager
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
-import io.reactivex.rxjava3.disposables.CompositeDisposable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.*
@@ -33,7 +32,6 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
     
     private val databaseLogger = DatabaseLogger(application)
     private val loggingManager = LoggingManager.getInstance()
-    private val disposables = CompositeDisposable()
     
     // EGLA Client instead of direct manager
     private val eglaClient = EGLALocationClient(application)
@@ -65,42 +63,37 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
     private fun connectToEGLAService() {
         log("Connecting to EGLA API Service...")
         
-        // Monitor connection state
-        disposables.add(
-            eglaClient.connectionState
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { state ->
-                    when (state) {
-                        EGLALocationClient.ConnectionState.CONNECTED -> {
-                            log("✓ Connected to EGLA API Service")
-                            isEGLAConnected = true
-                            updateUiState { it.copy(systemStatus = "EGLA API Connected") }
-                            setupEGLASubscriptions()
-                        }
-                        EGLALocationClient.ConnectionState.DISCONNECTED -> {
-                            log("❌ Disconnected from EGLA API Service")
-                            isEGLAConnected = false
-                            updateUiState { it.copy(systemStatus = "EGLA API Disconnected") }
-                        }
-                        EGLALocationClient.ConnectionState.CONNECTING -> {
-                            log("🔄 Connecting to EGLA API Service...")
-                            updateUiState { it.copy(systemStatus = "Connecting...") }
-                        }
+        // Launch Flow collectors in viewModelScope
+        viewModelScope.launch {
+            eglaClient.connectionStateFlow.collect { state ->
+                when (state) {
+                    EGLALocationClient.ConnectionState.CONNECTED -> {
+                        log("✓ Connected to EGLA API Service")
+                        isEGLAConnected = true
+                        updateUiState { it.copy(systemStatus = "EGLA API Connected") }
+                        setupEGLASubscriptions()
+                    }
+                    EGLALocationClient.ConnectionState.DISCONNECTED -> {
+                        log("❌ Disconnected from EGLA API Service")
+                        isEGLAConnected = false
+                        updateUiState { it.copy(systemStatus = "EGLA API Disconnected") }
+                    }
+                    EGLALocationClient.ConnectionState.CONNECTING -> {
+                        log("🔄 Connecting to EGLA API Service...")
+                        updateUiState { it.copy(systemStatus = "Connecting...") }
                     }
                 }
-        )
-        
-        // Subscribe to errors
-        disposables.add(
-            eglaClient.errors
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { error ->
-                    log("❌ EGLA API Error ${error.code}: ${error.message}")
-                    handleError("EGLA API Error: ${error.message}")
-                }
-        )
-        
-        // Connect to service
+            }
+        }
+
+        viewModelScope.launch {
+            eglaClient.errorsFlow.collect { error ->
+                log("❌ EGLA API Error ${error.code}: ${error.message}")
+                handleError("EGLA API Error: ${error.message}")
+            }
+        }
+
+        // Initiate connection
         if (!eglaClient.connect()) {
             log("❌ Failed to initiate connection to EGLA API Service")
             updateUiState { it.copy(systemStatus = "EGLA API Connection Failed") }
@@ -108,41 +101,31 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
     }
     
     private fun setupEGLASubscriptions() {
-        log("Setting up EGLA API subscriptions...")
+        log("Setting up EGLA API subscriptions…")
         
-        // Subscribe to location updates
-        disposables.add(
-            eglaClient.locationUpdates
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                    { location ->
-                        log("📍 Received location update from EGLA API")
-                        processLocationUpdate(location)
-                    },
-                    { error ->
-                        log("❌ Location subscription error: ${error.message}")
-                        handleError("Location error: ${error.message}")
-                    }
-                )
-        )
-        
-        // Subscribe to service status
-        disposables.add(
-            eglaClient.serviceStatus
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { status ->
-                    log("📊 EGLA Service status: $status")
-                    _isTracking.value = (status == EGLALocationClient.ServiceStatus.ACTIVE)
-                    
-                    val statusText = when (status) {
-                        EGLALocationClient.ServiceStatus.IDLE -> "Ready"
-                        EGLALocationClient.ServiceStatus.ACTIVE -> "Tracking"
-                        EGLALocationClient.ServiceStatus.ERROR -> "Error"
-                    }
-                    updateUiState { it.copy(systemStatus = "EGLA: $statusText") }
+        // Location updates
+        viewModelScope.launch {
+            eglaClient.locationFlow.collect { location ->
+                log("📍 Received location update from EGLA API")
+                processLocationUpdate(location)
+            }
+        }
+
+        // Service status updates
+        viewModelScope.launch {
+            eglaClient.serviceStatusFlow.collect { status ->
+                log("📊 EGLA Service status: $status")
+                _isTracking.value = (status == EGLALocationClient.ServiceStatus.ACTIVE)
+
+                val statusText = when (status) {
+                    EGLALocationClient.ServiceStatus.IDLE -> "Ready"
+                    EGLALocationClient.ServiceStatus.ACTIVE -> "Tracking"
+                    EGLALocationClient.ServiceStatus.ERROR -> "Error"
                 }
-        )
-        
+                updateUiState { it.copy(systemStatus = "EGLA: $statusText") }
+            }
+        }
+
         log("✓ EGLA API subscriptions ready")
     }
     
@@ -416,7 +399,6 @@ class LocationTrackingViewModelV2(application: Application) : AndroidViewModel(a
         // Clean up
         eglaClient.stopLocationUpdates()
         eglaClient.disconnect()
-        disposables.clear()
         
         log("ViewModel cleared - EGLA API disconnected")
     }
