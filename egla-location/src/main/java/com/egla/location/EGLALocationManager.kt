@@ -8,9 +8,16 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.egla.location.core.*
 import com.egla.location.service.EGLALocationService
-import io.reactivex.rxjava3.core.Observable
-import io.reactivex.rxjava3.subjects.BehaviorSubject
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 
@@ -28,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
  * val eglaManager = EGLALocationManager.getInstance(context)
  * eglaManager.configure(EGLAConfiguration.highAccuracyMode())
  * eglaManager.startLocationUpdates()
- * eglaManager.locationUpdates.subscribe { enhancedLocation ->
+ * eglaManager.locationUpdates.collect { enhancedLocation ->
  *     // Use enhanced location with improved accuracy
  * }
  * ```
@@ -49,10 +56,10 @@ class EGLALocationManager private constructor(
     private var isActive: Boolean = false
     private var lastKnownLocation: EnhancedLocation? = null
     
-    // Reactive Streams
-    private val _locationUpdates = BehaviorSubject.create<EnhancedLocation>()
-    private val _accuracyMetrics = BehaviorSubject.create<AccuracyMetrics>()
-    private val _systemStatus = BehaviorSubject.create<SystemStatus>()
+    // Flows – preferred reactive API
+    private val _locationUpdates = MutableSharedFlow<EnhancedLocation>(extraBufferCapacity = 1)
+    private val _accuracyMetrics = MutableStateFlow(AccuracyMetrics(0f,0f,0f,0f,0,0f))
+    private val _systemStatus = MutableStateFlow(SystemStatus.INACTIVE)
     
     // Coroutine Management
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -63,19 +70,19 @@ class EGLALocationManager private constructor(
     private var startTime: Long = 0L
     
     /**
-     * Observable stream of enhanced location updates
+     * Stream of enhanced location updates
      */
-    val locationUpdates: Observable<EnhancedLocation> = _locationUpdates.hide()
+    val locationUpdates: SharedFlow<EnhancedLocation> = _locationUpdates.asSharedFlow()
     
     /**
-     * Observable stream of accuracy metrics and statistics
+     * Stream of accuracy metrics and statistics
      */
-    val accuracyMetrics: Observable<AccuracyMetrics> = _accuracyMetrics.hide()
+    val accuracyMetrics: StateFlow<AccuracyMetrics> = _accuracyMetrics
     
     /**
-     * Observable stream of system status updates
+     * Stream of system status updates
      */
-    val systemStatus: Observable<SystemStatus> = _systemStatus.hide()
+    val systemStatus: StateFlow<SystemStatus> = _systemStatus
     
     /**
      * Current enhanced location (null if no fix available)
@@ -106,7 +113,7 @@ class EGLALocationManager private constructor(
             initializeComponents()
         }
         
-        _systemStatus.onNext(SystemStatus.CONFIGURED)
+        _systemStatus.value = SystemStatus.CONFIGURED
     }
     
     /**
@@ -115,7 +122,7 @@ class EGLALocationManager private constructor(
     fun startLocationUpdates(): Boolean {
         if (!hasLocationPermissions()) {
             Timber.e("Location permissions not granted")
-            _systemStatus.onNext(SystemStatus.PERMISSION_DENIED)
+            _systemStatus.value = SystemStatus.PERMISSION_DENIED
             return false
         }
         
@@ -131,14 +138,14 @@ class EGLALocationManager private constructor(
             isActive = true
             startTime = System.currentTimeMillis()
             
-            _systemStatus.onNext(SystemStatus.ACTIVE)
+            _systemStatus.value = SystemStatus.ACTIVE
             Timber.i("Enhanced location updates started")
             
             return true
             
         } catch (e: Exception) {
             Timber.e(e, "Failed to start location updates")
-            _systemStatus.onNext(SystemStatus.ERROR)
+            _systemStatus.value = SystemStatus.ERROR
             return false
         }
     }
@@ -158,7 +165,7 @@ class EGLALocationManager private constructor(
         environmentClassifier?.stop()
         swarmOptimizer?.stop()
         
-        _systemStatus.onNext(SystemStatus.STOPPED)
+        _systemStatus.value = SystemStatus.STOPPED
         Timber.i("Enhanced location updates stopped")
     }
     
@@ -197,9 +204,9 @@ class EGLALocationManager private constructor(
         scope.cancel()
         
         // Complete all observables
-        _locationUpdates.onComplete()
-        _accuracyMetrics.onComplete()
-        _systemStatus.onComplete()
+        _locationUpdates.close()
+        _accuracyMetrics.close()
+        _systemStatus.close()
         
         Timber.d("EGLA LocationManager released")
     }
@@ -305,7 +312,7 @@ class EGLALocationManager private constructor(
             
             // Update state and emit
             lastKnownLocation = enhancedLocation
-            _locationUpdates.onNext(enhancedLocation)
+            _locationUpdates.tryEmit(enhancedLocation)
             
             // Update metrics
             updateAccuracyMetrics(enhancedLocation)
@@ -362,7 +369,7 @@ class EGLALocationManager private constructor(
             successRate = performanceMetrics.successRate
         )
         
-        _accuracyMetrics.onNext(metrics)
+        _accuracyMetrics.value = metrics
     }
     
     private fun hasLocationPermissions(): Boolean {
