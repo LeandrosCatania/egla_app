@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library' version '8.0.2'
     id 'org.jetbrains.kotlin.android' version '1.8.21'
+    id 'org.jetbrains.dokka' version '1.9.10'
 }
 
 android {
@@ -75,4 +76,12 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:5.3.1'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+// Aggregate Dokka for all subprojects
+tasks.register('dokkaAll', org.jetbrains.dokka.gradle.DokkaTask.class) {
+    outputDirectory.set(file("${rootProject.buildDir}/dokka"))
+    subprojects.each { proj ->
+        dependsOn(proj.tasks.matching { it.name == 'dokkaHtml' })
+    }
 } 
